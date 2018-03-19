@@ -62,7 +62,10 @@ void AAgent_SCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 void AAgent_SCharacter::MoveRight(float Value)
 {
 	// add movement in that direction
-	AddMovementInput(FVector(0.f,-1.f,0.f), Value);
+	if (!IsHanging)
+	{
+		AddMovementInput(FVector(0.f, -1.f, 0.f), Value);
+	}
 }
 
 void AAgent_SCharacter::TouchStarted(const ETouchIndex::Type FingerIndex, const FVector Location)
