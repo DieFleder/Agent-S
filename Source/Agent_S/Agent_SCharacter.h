@@ -11,24 +11,23 @@ class AAgent_SCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-	/** Side view camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* SideViewCameraComponent;
+protected:
+	// PROPERTIES
 
-	/** Camera boom positioning the camera beside the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
 
 protected:
-
+	// METHODS
 	/** Called for side to side input */
-	void MoveRight(float Val);
+	void MoveRight(float Value);
+	void StartCrouch();
+	void StopCrouch();
+	void DropDown();
 
-	/** Handle touch inputs. */
-	void TouchStarted(const ETouchIndex::Type FingerIndex, const FVector Location);
+	///** Handle touch inputs. */
+	//void TouchStarted(const ETouchIndex::Type FingerIndex, const FVector Location);
 
-	/** Handle touch stop event. */
-	void TouchStopped(const ETouchIndex::Type FingerIndex, const FVector Location);
+	///** Handle touch stop event. */
+	//void TouchStopped(const ETouchIndex::Type FingerIndex, const FVector Location);
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
@@ -36,13 +35,57 @@ protected:
 
 
 public:
+	// PROPERTIES
+	UPROPERTY(BlueprintReadWrite)
+	bool IsHanging = false;
+
+public:
+	// METHODS
 	AAgent_SCharacter();
+
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	/** Returns SideViewCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetSideViewCameraComponent() const { return SideViewCameraComponent; }
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-	UPROPERTY(BlueprintReadWrite)
-	bool IsHanging = false;
+private:
+	// PROPERTIES
+	bool bCanTraceLedge = false;
+
+	//Default Sub-Objects
+	/** Side view camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* SideViewCameraComponent;
+	/** Camera boom positioning the camera beside the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* CameraBoom;
+
+	// Sphere collider used for ledge detection
+	UPROPERTY(VisibleAnywhere, Category = "Collision")
+	class USphereComponent* SphereTracer;
+
+
+private:
+	// METHODS
+	UFUNCTION(BlueprintCallable)
+	bool FindLedge(FVector& LedgeLocation);
+	UFUNCTION(BlueprintCallable)
+	bool	FindWall(FVector& WallLocation, FVector& WallNormal);
+	UFUNCTION()
+	void LedgeBeginOverlap(
+		class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, 
+		class UPrimitiveComponent* OtherComp, 
+		int32 OtherBodyIndex, 
+		bool bFromSweep, 
+		const FHitResult& SweepResult);
+	UFUNCTION()
+		void LedgeEndOverlap(
+			class UPrimitiveComponent* OverlappedComp,
+			class AActor* OtherActor,
+			class UPrimitiveComponent* OtherComp,
+			int32 OtherBodyIndex);
 };
