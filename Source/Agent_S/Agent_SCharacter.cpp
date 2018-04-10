@@ -9,6 +9,8 @@
 
 #include "Components/SphereComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimInstance.h"
 
 AAgent_SCharacter::AAgent_SCharacter()
 {
@@ -63,7 +65,7 @@ void AAgent_SCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	IsHanging = false;
+	bIsHanging = false;
 
 	//this->channel
 }
@@ -75,7 +77,8 @@ void AAgent_SCharacter::BeginPlay()
 void AAgent_SCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// set up gameplay key bindings
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AAgent_SCharacter::AgentSJump);
+	//PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AAgent_SCharacter::ClimbUpEvent);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AAgent_SCharacter::StartCrouch);
@@ -90,21 +93,42 @@ void AAgent_SCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 void AAgent_SCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	UE_LOG(LogTemp, Warning, TEXT("Ticking"))
 	if (bCanTraceLedge)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Can Trace = true"))
 		FVector LedgeLocation;
 		bool bLedgeFound	= FindLedge(LedgeLocation);
 		FVector WallLocation;
 		FVector WallNormal;
 		bool bWallFound = FindWall(WallLocation, WallNormal);
-		UE_LOG(LogTemp, Warning, TEXT("Wall Location = %s"), *(WallLocation.ToString()))
-		UE_LOG(LogTemp, Warning, TEXT("Ledge Location = %s"), *(LedgeLocation.ToString()))
+		if (bLedgeFound && bWallFound)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Found Wall And Ledge"))
+			if (IsLedgeInRange(LedgeLocation) && !bIsClimbingLedge)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Generating Grab Ledge Event"))
+				GrabLedgeEvent();
+			}
+		}
 	}
 }
+
+void AAgent_SCharacter::AgentSJump()
+{
+	if (!bIsHanging)
+	{
+		Jump();
+	}
+	else
+	{
+		ClimbUpEvent();
+	}
+}
+
 void AAgent_SCharacter::StartCrouch()
 {
-	if (IsHanging)
+	if (bIsHanging)
 	{
 		DropDown();
 	}
@@ -122,7 +146,7 @@ void AAgent_SCharacter::StopCrouch()
 void AAgent_SCharacter::MoveRight(float Value)
 {
 	// add movement in that direction
-	if (!IsHanging)
+	if (!bIsHanging)
 	{
 		AddMovementInput(FVector(0.0f, -1.0f, 0.0f) * Value);
 	}
@@ -169,8 +193,6 @@ bool AAgent_SCharacter::FindLedge(FVector& LedgeLocation)
 	if (bHit)
 	{
 		LedgeLocation = HitResult.Location;
-		UE_LOG(LogTemp, Warning, TEXT("Ledge Hit = %s"), *(HitResult.GetActor()->GetName()))
-		UE_LOG(LogTemp, Warning, TEXT("Ledge Blocking = %s"), (HitResult.bBlockingHit ? TEXT("True") : TEXT("False")))
 		DrawDebugSphere(GetWorld(), HitResult.Location, 20.f, 8, FColor::Green);
 	}
 
@@ -204,8 +226,6 @@ bool	AAgent_SCharacter::FindWall(FVector& WallLocation, FVector& WallNormal)
 		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 20.f, 8, FColor::Green);
 		WallLocation = HitResult.ImpactPoint;
 		WallNormal = HitResult.Normal;
-		UE_LOG(LogTemp, Warning, TEXT("Wall Hit = %s"), *(HitResult.GetActor()->GetName()))
-		UE_LOG(LogTemp, Warning, TEXT("Ledge Blocking = %s"), (HitResult.bBlockingHit ? TEXT("True") : TEXT("False")))
 	}
 
 	return bHit;
@@ -229,4 +249,13 @@ void AAgent_SCharacter::LedgeEndOverlap(
 	int32 OtherBodyIndex)
 {
 	bCanTraceLedge = false;
+}
+
+bool AAgent_SCharacter::IsLedgeInRange(FVector LedgeHeight)
+{
+	FVector HipLocation = GetMesh()->GetSocketLocation(TEXT("HipSocket"));
+	float Distance = HipLocation.Z - LedgeHeight.Z;
+	float Min = -50;
+	float Max = 0;
+	return (Distance >= Min && Distance <= Max);
 }

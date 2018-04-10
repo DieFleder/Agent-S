@@ -37,7 +37,9 @@ protected:
 public:
 	// PROPERTIES
 	UPROPERTY(BlueprintReadWrite)
-	bool IsHanging = false;
+	bool bIsHanging = false;
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsClimbingLedge = false;
 
 public:
 	// METHODS
@@ -45,6 +47,11 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BaseCharacter")
+	void ClimbUpEvent();
+	UFUNCTION(BlueprintImplementableEvent, Category = "BaseCharacter")
+	void GrabLedgeEvent();
 
 	/** Returns SideViewCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetSideViewCameraComponent() const { return SideViewCameraComponent; }
@@ -70,6 +77,9 @@ private:
 
 private:
 	// METHODS
+	bool IsLedgeInRange(FVector LedgeHeight);
+	void AgentSJump();
+
 	UFUNCTION(BlueprintCallable)
 	bool FindLedge(FVector& LedgeLocation);
 	UFUNCTION(BlueprintCallable)
